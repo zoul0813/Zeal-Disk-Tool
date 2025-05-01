@@ -1,0 +1,9 @@
+*.exe
+*.elf
+*.elf32
+*.AppImage
+AppDeploy
+appdir/zeal_disk_tool
+raylib/
+build/
+appdir/*.res
