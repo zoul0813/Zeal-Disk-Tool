@@ -7,3 +7,5 @@ appdir/zeal_disk_tool
 raylib/
 build/
 appdir/*.res
+zeal_disk_tool.elf.dSYM
+.vscode/settings.json

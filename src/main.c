@@ -15,8 +15,10 @@
 #include "popup.h"
 
 
-#define WIN_WIDTH       800
-#define WIN_HEIGHT      400
+#define MIN_WIN_WIDTH   800
+#define MIN_WIN_HEIGHT  400
+#define WIN_SCALE       0.5
+#define WIN_ASPECT      (9.0/16.0)
 #define NK_WHITE        nk_rgb(0xff, 0xff, 0xff)
 #define NK_BLACK        nk_rgb(0, 0, 0)
 #define NK_TRANSPARENT  nk_rgba_f(0, 0, 0, 0)
@@ -34,22 +36,32 @@
 static struct nk_context *ctx;
 static disk_info_t disks[MAX_DISKS];
 
+int winWidth, winHeight;
 
 /* This should only be the case for windows, but keep the code just in case */
 static int message_box(const char* message)
 {
+
+    const int fontSize = 24;
+    Font font = LoadFontFromNuklear(fontSize);
+    ctx = InitNuklearEx(font, fontSize);
+    nk_style_push_color(ctx, &ctx->style.text.color, nk_rgba(255,0,0,255));
+    SetWindowSize(MIN_WIN_WIDTH, MIN_WIN_HEIGHT);
+
     while (!WindowShouldClose()) {
         UpdateNuklear(ctx);
 
-        if (nk_begin(ctx, "Disks", nk_rect(0, 0, WIN_WIDTH, WIN_HEIGHT), 0)) {
+        if (nk_begin(ctx, "Disks", nk_rect(0, 0, MIN_WIN_WIDTH, MIN_WIN_HEIGHT), 0)) {
+            nk_layout_row_dynamic(ctx, MIN_WIN_HEIGHT, 1);
             nk_label(ctx, message, NK_TEXT_CENTERED);
         }
         nk_end(ctx);
 
 
-        BeginDrawing();
+        BeginDrawing(); {
             ClearBackground(WHITE);
             DrawNuklear(ctx);
+        }
         EndDrawing();
     }
 
@@ -161,7 +173,7 @@ static void ui_draw_disk(struct nk_context *ctx, const disk_info_t *disk, int* s
         /* Fill the whole line first to create a "selected" effect */
         if (*selected_part == i) {
             bounds = nk_widget_bounds(ctx);
-            bounds.w = WIN_WIDTH;
+            bounds.w = winWidth;
             bounds.x = 0;
             nk_fill_rect(canvas, bounds, 2.0f, NK_LIST_SELECTED);
         }
@@ -366,21 +378,40 @@ static void ui_new_partition(struct nk_context *ctx, disk_info_t* disk)
     nk_end(ctx);
 }
 
+static void setup_window() {
+    InitWindow(0, 0, "Zeal Disk Tool " VERSION);
 
+    // get current monitor details
+    int mw, mh;
+    int monitor = GetCurrentMonitor();
+    mw = GetMonitorWidth(monitor);
+    mh = GetMonitorHeight(monitor);
 
-int main(void) {
-    SetTraceLogLevel(LOG_WARNING);
-    InitWindow(WIN_WIDTH, WIN_HEIGHT, "Zeal Disk Tool " VERSION);
+    // clamp the window size to either WIN_SCALE or MIN
+    winWidth = NK_MAX(MIN_WIN_WIDTH, mw * WIN_SCALE);
+    winHeight = NK_MAX(MIN_WIN_HEIGHT, winWidth * WIN_ASPECT);
+    SetWindowSize(winWidth, winHeight);
+
+    // center the window on the current monitor
+    Vector2 mon_pos = GetMonitorPosition(monitor);
+    int pos_x = mon_pos.x, pos_y = mon_pos.y;
+    pos_x += (mw - winWidth) / 2;
+    pos_y += (mh - winHeight) / 2;
+    SetWindowPosition(pos_x, pos_y);
+
+#ifndef __APPLE__
     /* Set an icon for the application */
     Image icon = LoadImageFromMemory(".png", s_app_icon_png, sizeof(s_app_icon_png));
     SetWindowIcon(icon);
+#endif
+}
+
+int main(void) {
+    SetTraceLogLevel(LOG_WARNING);
+    setup_window();
 
     SetTargetFPS(60);
-    popup_init(WIN_WIDTH, WIN_HEIGHT);
-
-    const int fontSize = 13;
-    Font font = LoadFontFromNuklear(fontSize);
-    ctx = InitNuklearEx(font, fontSize);
+    popup_init(winWidth, winHeight);
 
     int disk_count = 0;
     disk_err_t err = disk_list(disks, MAX_DISKS, &disk_count);
@@ -392,6 +423,10 @@ int main(void) {
     } else if (err == ERR_NOT_ADMIN) {
         return message_box("You must run this program as Administrator!\n");
     }
+
+    const int fontSize = 13;
+    Font font = LoadFontFromNuklear(fontSize);
+    ctx = InitNuklearEx(font, fontSize);
 
     /* Construct the labels for the disks */
     static const char* disk_labels[MAX_DISKS] = { 0 };
@@ -418,7 +453,7 @@ int main(void) {
         const int flags = popup_any_opened() ? NK_WINDOW_NO_INPUT : 0;
         disk_info_t* current_disk = &disks[selected_disk];
 
-        if (nk_begin(ctx, "Disks", nk_rect(0, 0, WIN_WIDTH, WIN_HEIGHT), flags)) {
+        if (nk_begin(ctx, "Disks", nk_rect(0, 0, winWidth, winHeight), flags)) {
 
             /* Create the top row with the buttons and the disk selection */
             const float ratio[] = { 0.15f, 0.15f, 0.07f, 0.07f, 0.15f, 0.4f };
@@ -469,7 +504,8 @@ int main(void) {
 
             /* If we didn't find any disk, at least show the first one in teh combo box, it that has a dummy message */
             const int show_items = MAX(disk_count, 1);
-            int new_selection = nk_combo(ctx, &disk_labels[0], show_items, selected_disk, COMBO_HEIGHT, nk_vec2(combo_width, (disk_count + 1) * 30));
+            int selection_height = winHeight * 0.8;
+            int new_selection = nk_combo(ctx, &disk_labels[0], show_items, selected_disk, COMBO_HEIGHT, nk_vec2(combo_width, selection_height));
             if (new_selection != selected_disk) {
                 if (current_disk->has_staged_changes) {
                     static popup_info_t info = {

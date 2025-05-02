@@ -10,8 +10,8 @@
 
 disk_err_t disk_list(disk_info_t* out_disks, int max_disks, int* out_count) {
     *out_count = 0;
-    for (int i = 0; i < 10 && *out_count < max_disks; ++i) {
-        char path[64];
+    for (int i = 0; i < max_disks && *out_count < max_disks; ++i) {
+        char path[256];
         snprintf(path, sizeof(path), "\\\\.\\PhysicalDrive%d", i);
 
         HANDLE hDisk = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
@@ -39,6 +39,7 @@ disk_err_t disk_list(disk_info_t* out_disks, int max_disks, int* out_count) {
 
         if (info->size_bytes > MAX_DISK_SIZE) {
             CloseHandle(hDisk);
+            fprintf(stderr, "%s exceeds max disk size of %lluGB with %lluGB bytes\n", path, MAX_DISK_SIZE/GB, info->size_bytes/GB);
             continue;
         }
 
