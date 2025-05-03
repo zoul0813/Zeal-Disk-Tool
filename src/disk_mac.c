@@ -3,6 +3,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+#include "disk.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -23,8 +24,8 @@ disk_err_t disk_list(disk_info_t* out_disks, int max_disks, int* out_count) {
     memset(out_disks, 0, sizeof(disk_info_t) * max_disks);
     *out_count = 0;
 
-    for (int i = 1; i <= 9 && *out_count < max_disks; ++i) {
-        char path[64];
+    for (int i = 1; i <= max_disks && *out_count < max_disks; ++i) {
+        char path[256];
         snprintf(path, sizeof(path), "/dev/rdisk%d", i);
 
         int fd = open(path, O_RDONLY);
@@ -38,6 +39,7 @@ disk_err_t disk_list(disk_info_t* out_disks, int max_disks, int* out_count) {
         uint64_t block_count = 0, block_size = 0;
         if (ioctl(fd, DKIOCGETBLOCKCOUNT, &block_count) != 0 ||
             ioctl(fd, DKIOCGETBLOCKSIZE, &block_size) != 0) {
+            fprintf(stderr, "Could not get disk %s size: %s\n", path, strerror(errno));
             close(fd);
             continue;
         }
@@ -45,6 +47,7 @@ disk_err_t disk_list(disk_info_t* out_disks, int max_disks, int* out_count) {
         uint64_t size_bytes = block_count * block_size;
         if (size_bytes > MAX_DISK_SIZE) {
             close(fd);
+            fprintf(stderr, "%s exceeds max disk size of %lluGB with %lluGB bytes\n", path, MAX_DISK_SIZE/GB, size_bytes/GB);
             continue;
         }
 

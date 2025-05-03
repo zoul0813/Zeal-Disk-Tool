@@ -66,7 +66,22 @@ build/raylib-nuklear-win.o: src/raylib-nuklear.c
 	mkdir -p build
 	$(WIN_CC) $(CFLAGS) -c -o $@ $^
 
+############################
+# Build the MacOS binary   #
+############################
+MAC_CFLAGS=-O2 -Wall -Werror -Iinclude
+MAC_LDFLAGS=-lraylib
+MAC_TARGET=zeal_disk_tool.darwin.elf
+$(MAC_TARGET): src/disk_mac.c $(COMMON_SRCS) build/raylib-nuklear-darwin.o
+	$(CC) $(MAC_CFLAGS) -o $@ $^ $(MAC_LDFLAGS)
 
+build/raylib-nuklear-darwin.o: src/raylib-nuklear.c
+	mkdir -p build
+	$(CC) $(MAC_CFLAGS) -c -o $@ $^
+
+############################
+# Common                   #
+############################
 clean:
 	rm -f $(WIN_TARGET) $(TARGET) appdir/zeal-disk-tool.res
 	rm -rf build/

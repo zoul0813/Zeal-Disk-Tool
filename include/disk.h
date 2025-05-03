@@ -15,7 +15,7 @@
 #define MAX(a,b)    ((a) > (b) ? (a) : (b))
 
 
-#define MAX_DISKS           16
+#define MAX_DISKS           32
 #define MAX_DISK_SIZE       (32*GB)
 #define DISK_LABEL_LEN      512
 #define MAX_PART_COUNT      4

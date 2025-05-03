@@ -35,6 +35,7 @@ disk_err_t disk_list(disk_info_t* out_disks, int max_disks, int* out_count) {
 #endif
     memset(out_disks, 0, sizeof(disk_info_t) * max_disks);
     *out_count = 0;
+
     for (char c = 'a'; c <= 'z' && *out_count < max_disks; ++c) {
         char path[256];
         snprintf(path, sizeof(path), "/dev/sd%c", c);
@@ -64,6 +65,7 @@ disk_err_t disk_list(disk_info_t* out_disks, int max_disks, int* out_count) {
 
         if (info->size_bytes > MAX_DISK_SIZE) {
             close(fd);
+            fprintf(stderr, "%s exceeds max disk size of %lluGB with %lluGB bytes\n", path, MAX_DISK_SIZE/GB, info->size_bytes/GB);
             continue;
         }
 
