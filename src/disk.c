@@ -90,6 +90,28 @@ void disk_allocate_partition(disk_info_t *disk, uint32_t lba, int size_idx)
 }
 
 
+void disk_delete_partition(disk_info_t* disk, int partition)
+{
+    if (partition < 0 || partition >= MAX_PART_COUNT) {
+        return;
+    }
+
+    partition_t* part = &disk->staged_partitions[partition];
+    if (part->active) {
+        disk->has_staged_changes = true;
+        printf("[DISK] Deleting partition %d\n", partition);
+        part->active = false;
+        part->data_len = 0;
+        free(part->data);
+        part->data = NULL;
+        /* If the disk has no free partition, the current one is free now! */
+        if (disk->free_part_idx == -1) {
+            disk->free_part_idx = partition;
+        }
+    }
+}
+
+
 static void disk_free_staged_partitions_data(disk_info_t* disk)
 {
     /* Free the pointers in the partitions */

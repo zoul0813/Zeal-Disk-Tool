@@ -518,6 +518,9 @@ int main(void) {
                 }
             }
             ui_draw_disk(ctx, current_disk, &selected_partition);
+            if (IsKeyPressed(KEY_DELETE)) {
+                disk_delete_partition(current_disk, selected_partition);
+            }
         }
         nk_end(ctx);
 

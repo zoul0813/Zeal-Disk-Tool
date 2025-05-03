@@ -72,6 +72,8 @@ const char* const *disk_get_partition_size_list(void);
 
 void disk_allocate_partition(disk_info_t *disk, uint32_t lba, int size_idx);
 
+void disk_delete_partition(disk_info_t* disk, int partition);
+
 int disk_valid_partition_size(disk_info_t *disk, uint32_t *largest_free_lba);
 
 const char* disk_get_fs_type(uint8_t fs_byte);
