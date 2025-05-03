@@ -92,12 +92,12 @@ static int zealfsv2_format(uint8_t* partition, uint64_t size) {
     header->magic = 'Z';
     header->version = 2;
     /* According to the size of the disk, we have to calculate the size of the pages */
-    const uint16_t page_size_bytes = zealfsv2_page_size(size);
+    const int page_size_bytes = zealfsv2_page_size(size);
     /* The page size in the header is the log2(page_bytes/256) - 1 */
     header->page_size = ((sizeof(int) * 8) - (__builtin_clz(page_size_bytes >> 8))) - 1;
     header->bitmap_size = size / page_size_bytes / 8;
     /* If the page size is 256, there will be only one page for the FAT */
-    const int fat_pages_count = 1 + (header->page_size == 256 ? 0 : 1);
+    const int fat_pages_count = 1 + (page_size_bytes == 256 ? 0 : 1);
     /* Do not count the first page and the second page */
     header->free_pages = size / page_size_bytes - 1 - fat_pages_count;
     /* All the pages are free (0), mark the first one as occupied */
