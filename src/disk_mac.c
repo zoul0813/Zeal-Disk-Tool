@@ -17,8 +17,6 @@
 #include <sys/stat.h>
 #include <sys/disk.h>
 
-#define DEBUG_DISKS 0
-
 
 disk_err_t disk_list(disk_info_t* out_disks, int max_disks, int* out_count) {
     memset(out_disks, 0, sizeof(disk_info_t) * max_disks);
@@ -73,32 +71,52 @@ disk_err_t disk_list(disk_info_t* out_disks, int max_disks, int* out_count) {
 
 const char* disk_write_changes(disk_info_t* disk)
 {
-#if DEBUG_DISKS
-    return NULL;
-#endif
-
     static char error_msg[1024];
     assert(disk);
     assert(disk->has_mbr);
     assert(disk->has_staged_changes);
 
+    /* Reopen the disk to write it back */
     int fd = open(disk->name, O_WRONLY);
     if (fd < 0) {
-        snprintf(error_msg, sizeof(error_msg), "Could not open disk %s: %s\n",
-                 disk->name, strerror(errno));
+        sprintf(error_msg, "Could not open disk %s: %s\n", disk->name, strerror(errno));
         return error_msg;
     }
 
-    ssize_t wr = write(fd, disk->staged_mbr, DISK_SECTOR_SIZE);
-    close(fd);
-
+    /* Write MBR */
+    ssize_t wr = write(fd, disk->staged_mbr, sizeof(disk->staged_mbr));
     if (wr != DISK_SECTOR_SIZE) {
-        snprintf(error_msg, sizeof(error_msg), "Could not write disk %s: %s\n",
-                 disk->name, strerror(errno));
-        return error_msg;
+        sprintf(error_msg, "Could not write disk %s: %s\n", disk->name, strerror(errno));
+        goto error;
     }
 
-    disk_apply_changes(disk);
+    /* Write any new partition */
+    for (int i = 0; i < MAX_PART_COUNT; i++) {
+        const partition_t* part = &disk->staged_partitions[i];
+        if (part->data != NULL && part->data_len != 0) {
+            /* Data need to be written back to the disk */
+            off_t part_offset = part->start_lba * DISK_SECTOR_SIZE;
+            const off_t offset = lseek(fd, part_offset, SEEK_SET);
+            printf("[DISK] Writing partition %d @ %08lx, %d bytes\n", i, offset, part->data_len);
+            if (offset != part_offset){
+                sprintf(error_msg, "Could not offset in the disk %s: %s\n", disk->name, strerror(errno));
+                goto error;
+            }
+            wr = write(fd, part->data, part->data_len);
+            if (wr != part->data_len) {
+                sprintf(error_msg, "Could not write partition to disk %s: %s\n", disk->name, strerror(errno));
+                goto error;
+            }
+        } else {
+            printf("[DISK] Partition %d has no changes\n", i);
+        }
+    }
 
+    /* Apply the changes in RAM too */
+    disk_apply_changes(disk);
+    close(fd);
     return NULL;
+error:
+    close(fd);
+    return error_msg;
 }
