@@ -445,7 +445,7 @@ int main(void) {
             nk_label(ctx, "Select a disk:", NK_TEXT_RIGHT);
             float combo_width = nk_widget_width(ctx);
 
-            int new_selection = ui_combo_disk(ctx, selected_disk, &disk_labels[0], disk_count, combo_width);
+            int new_selection = ui_combo_disk(ctx, selected_disk, disks, disk_count, combo_width);
             if (new_selection != selected_disk) {
                 printf("disk changed: %d\n", new_selection);
                 if (current_disk->has_staged_changes) {

@@ -14,7 +14,6 @@
  disk_info_t disks[MAX_DISKS];
 int disk_count = 0;
 int selected_disk = 0;
-const char* disk_labels[MAX_DISKS] = { 0 };
 
 disk_err_t disks_refresh() {
     disk_err_t err = disk_list(disks, MAX_DISKS, &disk_count);
@@ -26,13 +25,13 @@ disk_err_t disks_refresh() {
         disk_get_size_str(disks[i].size_bytes, size_str, sizeof(size_str));
         /* Keep the first character empty, it will be a `*` in case there is any pending change */
         snprintf(disks[i].label, DISK_LABEL_LEN, " %.*s (%s)", (int) sizeof(disks[i].name), disks[i].name, size_str);
-        disk_labels[i] = disks[i].label;
+        printf("Disk: %s\n", disks[i].label);
         disk_parse_mbr_partitions(&disks[i]);
     }
 
-    if (disk_count == 0) {
-        disk_labels[0] = "No disk found";
-    }
+    // if (disk_count == 0) {
+    //     disks[0].label = "No disk found";
+    // }
 
     return ERR_SUCCESS;
 }

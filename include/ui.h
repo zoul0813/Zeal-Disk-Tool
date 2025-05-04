@@ -23,4 +23,4 @@
 extern int winWidth, winHeight;
 
 int message_box(struct nk_context *ctx, const char* message);
-int ui_combo_disk(struct nk_context *ctx, int selection, const char **disk_labels, int disk_count, int width);
+int ui_combo_disk(struct nk_context *ctx, int selected, disk_info_t *disks, int disk_count, int width);

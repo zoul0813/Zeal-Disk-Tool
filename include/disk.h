@@ -46,9 +46,10 @@ typedef struct {
 typedef struct {
     char        name[256];
     char        path[256];
+    char        label[DISK_LABEL_LEN];
+
     uint64_t    size_bytes;
     bool        valid;
-    char        label[DISK_LABEL_LEN];
     /* Original MBR */
     bool        has_mbr;
     uint8_t     mbr[DISK_SECTOR_SIZE];
@@ -64,7 +65,6 @@ typedef struct {
 extern disk_info_t disks[MAX_DISKS];
 extern int disk_count;
 extern int selected_disk;
-extern const char* disk_labels[MAX_DISKS];
 
 disk_err_t disks_refresh();
 
