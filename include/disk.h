@@ -47,6 +47,7 @@ typedef struct {
     char        name[256];
     char        path[256];
     uint64_t    size_bytes;
+    bool        valid;
     char        label[DISK_LABEL_LEN];
     /* Original MBR */
     bool        has_mbr;
@@ -59,6 +60,13 @@ typedef struct {
     int         free_part_idx;
 } disk_info_t;
 
+
+extern disk_info_t disks[MAX_DISKS];
+extern int disk_count;
+extern int selected_disk;
+extern const char* disk_labels[MAX_DISKS];
+
+disk_err_t disks_refresh();
 
 void disk_apply_changes(disk_info_t* disk);
 

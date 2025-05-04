@@ -42,14 +42,15 @@ disk_err_t disk_list(disk_info_t* out_disks, int max_disks, int* out_count) {
             continue;
         }
 
+        disk_info_t* info = &out_disks[*out_count];
         uint64_t size_bytes = block_count * block_size;
         if (size_bytes > MAX_DISK_SIZE) {
-            close(fd);
+            info->valid = false;
             fprintf(stderr, "%s exceeds max disk size of %lluGB with %lluGB bytes\n", path, MAX_DISK_SIZE/GB, size_bytes/GB);
-            continue;
+        } else {
+            info->valid = true;
         }
 
-        disk_info_t* info = &out_disks[*out_count];
         strncpy(info->name, path, sizeof(info->name) - 1);
         info->size_bytes = size_bytes;
 
@@ -97,7 +98,7 @@ const char* disk_write_changes(disk_info_t* disk)
             /* Data need to be written back to the disk */
             off_t part_offset = part->start_lba * DISK_SECTOR_SIZE;
             const off_t offset = lseek(fd, part_offset, SEEK_SET);
-            printf("[DISK] Writing partition %d @ %08lx, %d bytes\n", i, offset, part->data_len);
+            printf("[DISK] Writing partition %d @ %08llx, %d bytes\n", i, offset, part->data_len);
             if (offset != part_offset){
                 sprintf(error_msg, "Could not offset in the disk %s: %s\n", disk->name, strerror(errno));
                 goto error;

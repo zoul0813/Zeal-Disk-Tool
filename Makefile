@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-COMMON_SRCS=src/main.c src/popup.c src/disk.c include/app_version.h
+COMMON_SRCS=src/main.c src/disk.c src/ui/popup.c src/ui/combo_disk.c src/ui/message_box.c
 
 CC=gcc
 CFLAGS=-O2 -g -Wall -Iinclude -Iraylib/linux/include -Lraylib/linux/lib
@@ -89,5 +89,5 @@ build/raylib-nuklear-darwin.o: src/raylib-nuklear.c
 # Common                   #
 ############################
 clean:
-	rm -f $(WIN_TARGET) $(TARGET) appdir/zeal-disk-tool.res
-	rm -rf build/
+	rm -f $(WIN_TARGET) $(MAC_TARGET) $(TARGET) appdir/zeal-disk-tool.res
+	rm -rf build/ $(MAC_TARGET).dSYM

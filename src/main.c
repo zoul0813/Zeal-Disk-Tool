@@ -12,64 +12,13 @@
 #include "nuklear.h"
 #include "raylib-nuklear.h"
 #include "disk.h"
-#include "popup.h"
 
-
-#define MIN_WIN_WIDTH   800
-#define MIN_WIN_HEIGHT  400
-#define WIN_SCALE       0.5
-#define WIN_ASPECT      (9.0/16.0)
-#define NK_WHITE        nk_rgb(0xff, 0xff, 0xff)
-#define NK_BLACK        nk_rgb(0, 0, 0)
-#define NK_TRANSPARENT  nk_rgba_f(0, 0, 0, 0)
-
-
-/* Background color for the selected partition in the diagram */
-#define NK_SELECTED nk_rgb(0xf8, 0xf8, 0xba)
-
-/* Background color for the selected partition in the list */
-#define NK_LIST_SELECTED nk_rgb(0x55, 0x55, 0x55)
-
-#define COMBO_HEIGHT     30
-
+#include "ui.h"
+#include "ui/popup.h"
 
 static struct nk_context *ctx;
-static disk_info_t disks[MAX_DISKS];
 
 int winWidth, winHeight;
-
-/* This should only be the case for windows, but keep the code just in case */
-static int message_box(const char* message)
-{
-
-    const int fontSize = 24;
-    Font font = LoadFontFromNuklear(fontSize);
-    ctx = InitNuklearEx(font, fontSize);
-    nk_style_push_color(ctx, &ctx->style.text.color, nk_rgba(255,0,0,255));
-    SetWindowSize(MIN_WIN_WIDTH, MIN_WIN_HEIGHT);
-
-    while (!WindowShouldClose()) {
-        UpdateNuklear(ctx);
-
-        if (nk_begin(ctx, "Disks", nk_rect(0, 0, MIN_WIN_WIDTH, MIN_WIN_HEIGHT), 0)) {
-            nk_layout_row_dynamic(ctx, MIN_WIN_HEIGHT, 1);
-            nk_label(ctx, message, NK_TEXT_CENTERED);
-        }
-        nk_end(ctx);
-
-
-        BeginDrawing(); {
-            ClearBackground(WHITE);
-            DrawNuklear(ctx);
-        }
-        EndDrawing();
-    }
-
-    UnloadNuklear(ctx);
-    CloseWindow();
-    return 0;
-}
-
 
 static struct nk_color get_partition_color(int i)
 {
@@ -81,7 +30,6 @@ static struct nk_color get_partition_color(int i)
         default: return nk_rgb(200, 200, 200); break;
     }
 }
-
 
 static void ui_draw_disk(struct nk_context *ctx, const disk_info_t *disk, int* selected_part) {
     const uint64_t total_sectors = disk->size_bytes / DISK_SECTOR_SIZE;
@@ -378,6 +326,7 @@ static void ui_new_partition(struct nk_context *ctx, disk_info_t* disk)
     nk_end(ctx);
 }
 
+
 static void setup_window() {
     InitWindow(0, 0, "Zeal Disk Tool " VERSION);
 
@@ -406,6 +355,7 @@ static void setup_window() {
 #endif
 }
 
+
 int main(void) {
     SetTraceLogLevel(LOG_WARNING);
     setup_window();
@@ -413,36 +363,21 @@ int main(void) {
     SetTargetFPS(60);
     popup_init(winWidth, winHeight);
 
-    int disk_count = 0;
-    disk_err_t err = disk_list(disks, MAX_DISKS, &disk_count);
+    disk_err_t err = disks_refresh();
 
     /* Mac/Linux targets only */
     if (err == ERR_NOT_ROOT) {
         printf("You must run this program as root\n");
         return 1;
     } else if (err == ERR_NOT_ADMIN) {
-        return message_box("You must run this program as Administrator!\n");
+        return message_box(ctx, "You must run this program as Administrator!\n");
     }
 
     const int fontSize = 13;
     Font font = LoadFontFromNuklear(fontSize);
     ctx = InitNuklearEx(font, fontSize);
 
-    /* Construct the labels for the disks */
-    static const char* disk_labels[MAX_DISKS] = { 0 };
-    int selected_disk = 0;
-    for (int i = 0; i < disk_count; ++i) {
-        char size_str[128];
-        disk_get_size_str(disks[i].size_bytes, size_str, sizeof(size_str));
-        /* Keep the first character empty, it will be a `*` in case there is any pending change */
-        snprintf(disks[i].label, DISK_LABEL_LEN, " %.*s (%s)", (int) sizeof(disks[i].name), disks[i].name, size_str);
-        disk_labels[i] = disks[i].label;
-        disk_parse_mbr_partitions(&disks[i]);
-    }
 
-    if (disk_count == 0) {
-        disk_labels[0] = "No disk found";
-    }
 
     int selected_partition = 0;
 
@@ -510,21 +445,20 @@ int main(void) {
             nk_label(ctx, "Select a disk:", NK_TEXT_RIGHT);
             float combo_width = nk_widget_width(ctx);
 
-            /* If we didn't find any disk, at least show the first one in teh combo box, it that has a dummy message */
-            const int show_items = MAX(disk_count, 1);
-            int selection_height = winHeight * 0.8;
-            int new_selection = nk_combo(ctx, &disk_labels[0], show_items, selected_disk, COMBO_HEIGHT, nk_vec2(combo_width, selection_height));
+            int new_selection = ui_combo_disk(ctx, selected_disk, &disk_labels[0], disk_count, combo_width);
             if (new_selection != selected_disk) {
+                printf("disk changed: %d\n", new_selection);
                 if (current_disk->has_staged_changes) {
                     static popup_info_t info = {
                         .title = "Cannot switch disk",
-                        .msg = "The selected disk has unsaved changes. Please apply or discard them before switching disks."
-                    };
+                        .msg = "The selected disk has unsaved changes. Please apply or discard them before switching disks."};
                     popup_open(POPUP_MBR, 300, 140, &info);
                 } else {
                     selected_disk = new_selection;
                 }
             }
+
+
             ui_draw_disk(ctx, current_disk, &selected_partition);
         }
         nk_end(ctx);
