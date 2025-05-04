@@ -456,8 +456,8 @@ int main(void) {
         if (nk_begin(ctx, "Disks", nk_rect(0, 0, winWidth, winHeight), flags)) {
 
             /* Create the top row with the buttons and the disk selection */
-            const float ratio[] = { 0.15f, 0.15f, 0.07f, 0.07f, 0.15f, 0.4f };
-            nk_layout_row(ctx, NK_DYNAMIC, COMBO_HEIGHT, 6, ratio);
+            const float ratio[] = { 0.10f, 0.15f, 0.15f, 0.07f, 0.07f, 0.15f, 0.4f };
+            nk_layout_row(ctx, NK_DYNAMIC, COMBO_HEIGHT, 7, ratio);
 
             /* Create the button with label "MBR" */
             if (nk_widget_is_hovered(ctx)) {
@@ -483,6 +483,14 @@ int main(void) {
             if (nk_button_label(ctx, "New partition") && disk_count > 0) {
                 static int choosen_option = 0;
                 popup_open(POPUP_NEWPART, 300, 300, &choosen_option);
+            }
+
+            /* Create the button to delete a partition */
+            if (nk_widget_is_hovered(ctx)) {
+                nk_tooltip(ctx, "Delete the selected partition on the disk");
+            }
+            if ((nk_button_label(ctx, "Delete partition") || IsKeyPressed(KEY_DELETE)) && disk_count > 0) {
+                disk_delete_partition(current_disk, selected_partition);
             }
 
             /* Create the button to commit the changes */
@@ -518,9 +526,6 @@ int main(void) {
                 }
             }
             ui_draw_disk(ctx, current_disk, &selected_partition);
-            if (IsKeyPressed(KEY_DELETE)) {
-                disk_delete_partition(current_disk, selected_partition);
-            }
         }
         nk_end(ctx);
 

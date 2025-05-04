@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-COMMON_SRCS=src/main.c src/popup.c src/disk.c
+COMMON_SRCS=src/main.c src/popup.c src/disk.c include/app_version.h
 
 CC=gcc
 CFLAGS=-O2 -g -Wall -Iinclude -Iraylib/linux/include -Lraylib/linux/lib
@@ -13,6 +13,12 @@ TARGET=zeal_disk_tool.elf
 LINUXDEPLOY?=./linuxdeploy-x86_64.AppImage
 
 all: $(TARGET)
+
+include/app_version.h: FORCE
+	echo "#define VERSION \"$$(git describe --always || echo local)\"" > $@
+
+FORCE:
+
 
 ##########################
 # Build the Linux binary #
